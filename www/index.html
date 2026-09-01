@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>هایپریک</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Tahoma, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #FFFFFF;
+            color: #757575;
+        }
+    </style>
+</head>
+<body>
+    <p>در حال بارگذاری هایپریک...</p>
+    <script>
+        (function () {
+            var target = 'https://dev2.hyperyek.com/app/hyperyek-general/store/#/login';
+            var hashIndex = target.indexOf("#");
+            var withoutHash = hashIndex === -1 ? target : target.slice(0, hashIndex);
+            var hash = hashIndex === -1 ? "" : target.slice(hashIndex);
+            var joiner = withoutHash.indexOf("?") === -1 ? "?" : "&";
+            var fresh = withoutHash + joiner + "_va=" + Date.now() + hash;
+
+            try {
+                window.location.replace(fresh);
+            } catch (error) {
+                window.location.href = fresh;
+            }
+        })();
+    </script>
+</body>
+</html>

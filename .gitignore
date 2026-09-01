@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+*.xcuserstate
+*.xcuserdata
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+dist/
+*.ipa
+*.xcarchive

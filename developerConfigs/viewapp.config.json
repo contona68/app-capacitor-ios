@@ -1,0 +1,30 @@
+{
+  // =====================================================================
+  // منبع واحد تنظیمات ViewApp iOS — بعد از تغییر: npm run sync:config
+  // =====================================================================
+
+  "app": {
+    "id": "com.hyperyek.app",
+    "name": "HyperYek",
+    "displayName": "هایپریک"
+  },
+
+  "url": {
+    "start": "https://dev2.hyperyek.com/app/hyperyek-general/store/#/login"
+  },
+
+  "navigation": {
+    "allowedDomains": [
+      "10.1.24.16"
+    ]
+  },
+
+  "webview": {
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1 ViewApp/1.0"
+  },
+
+  "branding": {
+    "splashBackground": "#FFFFFF",
+    "offlineTitle": "#757575"
+  }
+}

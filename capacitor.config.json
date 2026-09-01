@@ -1,0 +1,17 @@
+{
+  "appId": "com.hyperyek.app",
+  "appName": "HyperYek",
+  "webDir": "www",
+  "server": {
+    "iosScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "dev.hyperyek.com",
+      "dev2.hyperyek.com",
+      "10.1.24.16"
+    ]
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}
