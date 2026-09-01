@@ -1,0 +1,116 @@
+name: Build iOS IPA (Self-hosted Mac)
+
+# برای IPA واقعی با Apple ID رایگان (۷ روز):
+# 1) یک Mac با Xcode و Apple ID لاگین‌شده
+# 2) Self-hosted runner با label: self-hosted, macos, ios
+# 3) Secret: IOS_DEVELOPMENT_TEAM (Team ID از Xcode)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-ios-ipa-self-hosted-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Archive and export IPA (automatic signing)
+    runs-on: [self-hosted, macos, ios]
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Team ID secret
+        run: |
+          if [ -z "${IOS_DEVELOPMENT_TEAM:-}" ]; then
+            echo "::error::Missing repository secret: IOS_DEVELOPMENT_TEAM"
+            echo "Xcode → Settings → Accounts → Team ID را بگذارید."
+            exit 1
+          fi
+        env:
+          IOS_DEVELOPMENT_TEAM: ${{ secrets.IOS_DEVELOPMENT_TEAM }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Sync ViewApp config and Capacitor iOS
+        run: npm run sync:ios
+
+      - name: Install CocoaPods
+        run: |
+          cd ios/App
+          pod install
+
+      - name: Prepare ExportOptions.plist
+        run: |
+          mkdir -p dist
+          sed "s/REPLACE_WITH_TEAM_ID/${IOS_DEVELOPMENT_TEAM}/g" \
+            buildTools/ios/ExportOptions-automatic.plist > dist/ExportOptions.plist
+        env:
+          IOS_DEVELOPMENT_TEAM: ${{ secrets.IOS_DEVELOPMENT_TEAM }}
+
+      - name: Build archive and export IPA
+        env:
+          IOS_DEVELOPMENT_TEAM: ${{ secrets.IOS_DEVELOPMENT_TEAM }}
+        run: |
+          ARCHIVE_PATH="$RUNNER_TEMP/App.xcarchive"
+          EXPORT_PATH="dist"
+
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -destination "generic/platform=iOS" \
+            -archivePath "$ARCHIVE_PATH" \
+            archive \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$IOS_DEVELOPMENT_TEAM" \
+            -allowProvisioningUpdates
+
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist dist/ExportOptions.plist \
+            -allowProvisioningUpdates
+
+          ls -lh "$EXPORT_PATH"
+
+      - name: Prepare artifact name
+        id: artifact
+        run: |
+          IPA="$(find dist -maxdepth 1 -name '*.ipa' -print -quit)"
+          test -f "$IPA"
+          BRANCH="${GITHUB_REF_NAME//\//-}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          NAME="hyperyek-ios-${BRANCH}-${SHORT_SHA}.ipa"
+          cp "$IPA" "dist/${NAME}"
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+          ls -lh "dist/${NAME}"
+
+          {
+            echo "## iOS IPA (development — free Apple ID)"
+            echo ""
+            echo "**Artifact:** \`${NAME}\`"
+            echo ""
+            echo "امضا با **Personal Team** روی Mac runner انجام شده (~۷ روز اعتبار)."
+            echo "نصب: Mac + Xcode → Devices → Install app"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: dist/${{ steps.artifact.outputs.name }}
+          if-no-files-found: error
+          retention-days: 30

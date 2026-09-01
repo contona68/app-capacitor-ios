@@ -1,0 +1,84 @@
+name: Build iOS
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-simulator:
+    name: Build for iOS Simulator
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Sync ViewApp config and Capacitor iOS
+        run: npm run sync:ios
+
+      - name: Install CocoaPods
+        run: |
+          cd ios/App
+          pod install
+
+      - name: Build simulator app
+        run: |
+          DERIVED="$RUNNER_TEMP/DerivedData"
+          xcodebuild build \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,name=iPhone 16,OS=latest" \
+            -derivedDataPath "$DERIVED" \
+            CODE_SIGNING_ALLOWED=NO
+
+          APP_PATH="$DERIVED/Build/Products/Debug-iphonesimulator/App.app"
+          test -d "$APP_PATH"
+
+          BRANCH="${GITHUB_REF_NAME//\//-}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          NAME="hyperyek-ios-simulator-${BRANCH}-${SHORT_SHA}"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/${NAME}.zip"
+          echo "name=${NAME}" >> "$GITHUB_ENV"
+          ls -lh "dist/${NAME}.zip"
+
+      - name: Summary
+        run: |
+          {
+            echo "## iOS Simulator build"
+            echo ""
+            echo "**Artifact:** \`${{ env.name }}.zip\`"
+            echo ""
+            echo "این خروجی فقط روی **iOS Simulator** (Mac + Xcode) اجرا می‌شود."
+            echo "برای نصب روی iPhone واقعی از workflow **Build iOS IPA (Self-hosted Mac)** استفاده کنید."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload simulator artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.name }}
+          path: dist/${{ env.name }}.zip
+          if-no-files-found: error
+          retention-days: 30

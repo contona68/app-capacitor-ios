@@ -19,7 +19,70 @@
 | فریم‌ورک | Capacitor 6 |
 | کانفیگ | `developerConfigs/viewapp.config.json` |
 | sync | `npm run sync:ios` |
-| CI | GitHub Actions روی `macos-latest` → فایل `.ipa` |
+| CI | GitHub Actions — Simulator (همیشه) + IPA (Self-hosted Mac) |
+
+---
+
+## خروجی روی GitHub — کدام مسیر؟
+
+| مسیر | هزینه | خروجی | نصب روی iPhone |
+|------|--------|--------|----------------|
+| **Build iOS** (`build-ios.yml`) | رایگان | `.zip` Simulator | ❌ فقط Simulator |
+| **Build iOS IPA (Self-hosted Mac)** | رایگان | `.ipa` | ✅ ~۷ روز (Apple ID رایگان) |
+| **Build iOS IPA (Paid)** (`build-ipa.yml`) | ۹۹$/سال | `.ipa` | ✅ با secrets |
+
+### مسیر پیشنهادی شما (رایگان + GitHub + iPhone)
+
+1. یک **Mac** با Xcode
+2. **Apple ID رایگان** در Xcode → Settings → Accounts
+3. **Self-hosted runner** روی همان Mac
+4. یک secret: `IOS_DEVELOPMENT_TEAM`
+
+---
+
+## راه‌اندازی Self-hosted Runner (Mac)
+
+### ۱. Team ID را پیدا کنید
+
+Xcode → **Settings → Accounts** → Apple ID → **Team ID** (مثلاً `A1B2C3D4E5`)
+
+در GitHub repo → **Settings → Secrets → Actions**:
+- Name: `IOS_DEVELOPMENT_TEAM`
+- Value: همان Team ID
+
+### ۲. Runner را روی Mac نصب کنید
+
+GitHub repo → **Settings → Actions → Runners → New self-hosted runner** → macOS
+
+دستورات GitHub را روی Mac اجرا کنید. هنگام config، **labels** را اضافه کنید:
+
+```bash
+./config.sh --url https://github.com/contona68/app-capacitor-ios --token TOKEN --labels macos,ios
+```
+
+Runner باید labels داشته باشد: `self-hosted`, `macos`, `ios`
+
+### ۳. پیش‌نیاز Mac
+
+- Xcode نصب باشد
+- Apple ID در Xcode لاگین باشد
+- Node.js 20، CocoaPods (`sudo gem install cocoapods`)
+- گوشی تست (اختیاری برای اولین بار): یک‌بار از Xcode مستقیم Run بزنید تا trust برقرار شود
+
+### ۴. اجرا
+
+- **Actions → Build iOS IPA (Self-hosted Mac) → Run workflow**
+- بعد از نصب runner می‌توانید trigger `push` را هم به workflow اضافه کنید
+- خروجی: **Artifacts** → `hyperyek-ios-*.ipa`
+
+---
+
+## Build Simulator (بدون Mac — GitHub-hosted)
+
+Workflow: **Build iOS** — روی هر push اجرا می‌شود، **بدون secret**.
+
+- خروجی: `hyperyek-ios-simulator-*.zip`
+- فقط روی Simulator Mac باز می‌شود (برای تست compile)
 
 ---
 
@@ -87,9 +150,11 @@ npm run sync:config
 
 ## Build در GitHub Actions
 
-- Workflow: `.github/workflows/build-ipa.yml`
-- Trigger: push به `main` / `beta` یا **Run workflow** دستی
-- خروجی: Artifact با نام `hyperyek-ios-<branch>-<sha>.ipa`
+| Workflow | Trigger | Secret لازم |
+|----------|---------|-------------|
+| `build-ios.yml` | push / manual | — |
+| `build-ipa-self-hosted.yml` | push / manual | `IOS_DEVELOPMENT_TEAM` |
+| `build-ipa.yml` | manual فقط | ۶ secret (حساب پولی) |
 
 ---
 

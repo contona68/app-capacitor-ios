@@ -1,10 +1,9 @@
-name: Build iOS IPA
+name: Build iOS IPA (Paid Apple Developer)
+
+# فقط با Apple Developer Program (~99$/year) و secrets کامل.
+# برای رایگان: از build-ipa-self-hosted.yml استفاده کنید.
 
 on:
-  push:
-    branches:
-      - main
-      - beta
   workflow_dispatch:
 
 permissions:
